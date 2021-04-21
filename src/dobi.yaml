@@ -1,0 +1,36 @@
+# ===================================================
+# mounts
+# ===================================================
+mount=mount-device-state-service-src:
+  bind: "src/"
+  path: "/src"
+  read-only: false # allow go.mod update
+
+mount=mount-device-state-service-bin:
+  bind: "bin/"
+  path: "/install"
+  read-only: false
+
+# ===================================================
+# jobs
+# ===================================================
+job=build-device-state-service:
+  use: image-go-builder
+  command: bash -c 'cd /src && make -j${nproc}'
+  mounts:
+    - mount-device-state-service-src
+    - mount-device-state-service-bin
+    - mount-go-pkg
+  sources:
+    - src
+  artifact:
+    - bin/device-state-service
+  user: "{user.uid}:{user.gid}"
+  env:
+    - VERSION={env.GitVersion_InformationalVersion}
+    - BIN_DIR=/install
+    - GOCACHE=/tmp/cache
+  annotations:
+    description: "\t-> build device-state-service"
+    tags:
+      - build

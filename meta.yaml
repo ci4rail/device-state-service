@@ -1,0 +1,22 @@
+# ===================================================
+# meta infos
+# ===================================================
+
+meta:
+  project: device-state-service
+  include:
+    - dobi.yaml
+    - version.yaml
+    - src/dobi.yaml
+
+# ===================================================
+# alias
+# ===================================================
+
+alias=build:
+  tasks:
+    - build-device-state-service
+  annotations:
+    description: "\t\t-> [alias] build all"
+    tags:
+      - alias
