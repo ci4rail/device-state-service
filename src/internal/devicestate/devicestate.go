@@ -28,13 +28,13 @@ import (
 // * Setup signal handler
 // * Startup processes
 // * Wait for processes to terminate
-func DeviceState(gpioChip string, lineNr int, checkIntervalMs int) {
+func DeviceState(gpioChip string, lineNr int, invertLED bool, checkIntervalMs int) {
 
 	// Create channel for transmiision of connection state to led service
 	connectionStateChannel := make(chan bool)
 
 	// Create LED service instance
-	ledService, err := NewLedService(connectionStateChannel, gpioChip, lineNr)
+	ledService, err := NewLedService(connectionStateChannel, gpioChip, lineNr, invertLED)
 	if err != nil {
 		// Nothing needs to be closed before termination
 		// print error and terminate

@@ -42,12 +42,13 @@ type LedService struct {
 	blinkPattern blinkPattern
 	chip         *gpiod.Chip
 	line         *gpiod.Line
+	invertLED    bool
 	wg           sync.WaitGroup
 }
 
 // NewLedService intialize led service
 // GPIO used can be configured
-func NewLedService(connectionStateChannel chan bool, gpioChip string, lineNr int) (*LedService, error) {
+func NewLedService(connectionStateChannel chan bool, gpioChip string, lineNr int, invertLED bool) (*LedService, error) {
 
 	chip, err := gpiod.NewChip(gpioChip)
 	if err != nil {
@@ -63,6 +64,7 @@ func NewLedService(connectionStateChannel chan bool, gpioChip string, lineNr int
 		closed:    make(chan interface{}),
 		chip:      chip,
 		line:      line,
+		invertLED: invertLED,
 		stateChan: connectionStateChannel,
 	}, nil
 }
@@ -143,6 +145,9 @@ func (l *LedService) controlLed() {
 		}
 
 		ledVal := steps[curPattern][stepIdx]
+		if l.invertLED {
+			ledVal ^= 0x1
+		}
 		err := l.line.SetValue(ledVal)
 		if err != nil {
 			log.Println(err)

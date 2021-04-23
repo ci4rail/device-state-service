@@ -27,12 +27,14 @@ import (
 const (
 	defaultGpioChip        = "gpiochip4"
 	defaultLineNr          = 26
+	defaultInvertLED       = false
 	defaultCheckIntervalMs = 500
 )
 
 var (
 	gpioChip        string
 	lineNr          int
+	invertLED       bool
 	checkIntervalMs int
 )
 
@@ -50,7 +52,7 @@ Device status is indicated via LED on edge device:
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// start main function
-		devicestate.DeviceState(gpioChip, lineNr, checkIntervalMs)
+		devicestate.DeviceState(gpioChip, lineNr, invertLED, checkIntervalMs)
 
 	},
 }
@@ -72,5 +74,6 @@ func init() {
 
 	rootCmd.Flags().StringVarP(&gpioChip, "chip", "c", defaultGpioChip, "use alternative GPIO chip / bank")
 	rootCmd.Flags().IntVarP(&lineNr, "line", "l", defaultLineNr, "use alternative GPIO chip line")
+	rootCmd.Flags().BoolVarP(&invertLED, "invert", "n", defaultInvertLED, "invert LED (for active low LED drivers)")
 	rootCmd.Flags().IntVarP(&checkIntervalMs, "interval", "i", defaultCheckIntervalMs, "interval in milliseconds for checking connection state")
 }
