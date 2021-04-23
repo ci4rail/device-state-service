@@ -132,11 +132,7 @@ func (l *LedService) controlLed() {
 		pattern := l.blinkPattern.getPattern()
 
 		if pattern == exit {
-			err := l.line.SetValue(0)
-			if err != nil {
-				log.Println(err)
-				os.Exit(1)
-			}
+			l.SetLED(0)
 			break
 		}
 		if pattern != curPattern {
@@ -145,19 +141,23 @@ func (l *LedService) controlLed() {
 		}
 
 		ledVal := steps[curPattern][stepIdx]
-		if l.invertLED {
-			ledVal ^= 0x1
-		}
-		err := l.line.SetValue(ledVal)
-		if err != nil {
-			log.Println(err)
-			os.Exit(1)
-		}
+		l.SetLED(ledVal)
 
 		time.Sleep(baseTimeMilliSec * time.Millisecond)
 		stepIdx++
 		if stepIdx == numberSteps {
 			stepIdx = 0
 		}
+	}
+}
+
+func (l *LedService) SetLED(ledVal int) {
+	if l.invertLED {
+		ledVal ^= 0x1
+	}
+	err := l.line.SetValue(ledVal)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
 	}
 }
