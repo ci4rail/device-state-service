@@ -17,8 +17,8 @@ limitations under the License.
 package devicestate
 
 import (
+	"fmt"
 	"log"
-	"os"
 	"sync"
 	"time"
 
@@ -114,6 +114,8 @@ func (l *LedService) Run() {
 
 // controlLed goroutine which executes the currently selected blink pattern
 func (l *LedService) controlLed() {
+	var err error
+
 	l.wg.Add(1)
 	defer l.wg.Done()
 
@@ -132,7 +134,7 @@ func (l *LedService) controlLed() {
 		pattern := l.blinkPattern.getPattern()
 
 		if pattern == exit {
-			l.SetLED(0)
+			err = l.SetLED(0)
 			break
 		}
 		if pattern != curPattern {
@@ -141,8 +143,11 @@ func (l *LedService) controlLed() {
 		}
 
 		ledVal := steps[curPattern][stepIdx]
-		l.SetLED(ledVal)
-
+		err = l.SetLED(ledVal)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
 		time.Sleep(baseTimeMilliSec * time.Millisecond)
 		stepIdx++
 		if stepIdx == numberSteps {
@@ -151,13 +156,9 @@ func (l *LedService) controlLed() {
 	}
 }
 
-func (l *LedService) SetLED(ledVal int) {
+func (l *LedService) SetLED(ledVal int) error {
 	if l.invertLED {
 		ledVal ^= 0x1
 	}
-	err := l.line.SetValue(ledVal)
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
+	return l.line.SetValue(ledVal)
 }
