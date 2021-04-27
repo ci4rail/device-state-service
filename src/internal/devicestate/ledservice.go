@@ -30,6 +30,19 @@ const (
 	baseTimeMilliSec = 500
 )
 
+type blinkPatterns int
+
+const (
+	off blinkPatterns = iota
+	blink
+	on
+	exit
+)
+
+type blinkPattern struct {
+	pattern blinkPatterns
+}
+
 // LedService implements an led service indicating the device connection state by
 // applying a blink pattern on the device led selected.
 //
@@ -49,7 +62,6 @@ type LedService struct {
 // NewLedService intialize led service
 // GPIO used can be configured
 func NewLedService(connectionStateChannel chan bool, gpioChip string, lineNr int, invertLED bool) (*LedService, error) {
-
 	chip, err := gpiod.NewChip(gpioChip)
 	if err != nil {
 		return nil, err
@@ -98,15 +110,15 @@ func (l *LedService) Run() {
 	for {
 		select {
 		case <-l.closed: // close function was called
-			l.blinkPattern.changePattern(exit) // set blink pattern to terminate
+			l.blinkPattern.pattern = exit // set blink pattern to terminate
 			return
 		case connectionState := <-l.stateChan:
 			// depending on the connection state change the blink pattern
 			if connectionState {
-				l.blinkPattern.changePattern(on)
+				l.blinkPattern.pattern = on
 
 			} else if !connectionState {
-				l.blinkPattern.changePattern(blink)
+				l.blinkPattern.pattern = blink
 			}
 		}
 	}
@@ -114,8 +126,6 @@ func (l *LedService) Run() {
 
 // controlLed goroutine which executes the currently selected blink pattern
 func (l *LedService) controlLed() {
-	var err error
-
 	l.wg.Add(1)
 	defer l.wg.Done()
 
@@ -131,11 +141,13 @@ func (l *LedService) controlLed() {
 	stepIdx := 0
 	curPattern := off
 	for {
-		pattern := l.blinkPattern.getPattern()
+		pattern := l.blinkPattern.pattern
 
 		if pattern == exit {
-			err = l.SetLED(0)
-			break
+			if err := l.SetLED(0); err != nil {
+				fmt.Println(err)
+				break
+			}
 		}
 		if pattern != curPattern {
 			stepIdx = 0
@@ -143,8 +155,7 @@ func (l *LedService) controlLed() {
 		}
 
 		ledVal := steps[curPattern][stepIdx]
-		err = l.SetLED(ledVal)
-		if err != nil {
+		if err := l.SetLED(ledVal); err != nil {
 			fmt.Println(err)
 			break
 		}
