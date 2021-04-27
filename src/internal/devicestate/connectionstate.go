@@ -54,6 +54,7 @@ func (c *ConnectionState) Run() {
 
 	// pre-initialize connection state
 	connState := false
+	c.stateChan <- connState
 
 	for {
 		select {
