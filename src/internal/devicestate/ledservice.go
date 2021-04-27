@@ -146,8 +146,8 @@ func (l *LedService) controlLed() {
 		if pattern == exit {
 			if err := l.SetLED(0); err != nil {
 				fmt.Println(err)
-				break
 			}
+			break
 		}
 		if pattern != curPattern {
 			stepIdx = 0
