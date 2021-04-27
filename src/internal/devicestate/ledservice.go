@@ -17,8 +17,8 @@ limitations under the License.
 package devicestate
 
 import (
+	"fmt"
 	"log"
-	"os"
 	"sync"
 	"time"
 
@@ -29,6 +29,19 @@ const (
 	// baseTimeMilliSec is the minimum time the led stays in one state
 	baseTimeMilliSec = 500
 )
+
+type blinkPatterns int
+
+const (
+	off blinkPatterns = iota
+	blink
+	on
+	exit
+)
+
+type blinkPattern struct {
+	pattern blinkPatterns
+}
 
 // LedService implements an led service indicating the device connection state by
 // applying a blink pattern on the device led selected.
@@ -42,13 +55,13 @@ type LedService struct {
 	blinkPattern blinkPattern
 	chip         *gpiod.Chip
 	line         *gpiod.Line
+	invertLED    bool
 	wg           sync.WaitGroup
 }
 
 // NewLedService intialize led service
 // GPIO used can be configured
-func NewLedService(connectionStateChannel chan bool, gpioChip string, lineNr int) (*LedService, error) {
-
+func NewLedService(connectionStateChannel chan bool, gpioChip string, lineNr int, invertLED bool) (*LedService, error) {
 	chip, err := gpiod.NewChip(gpioChip)
 	if err != nil {
 		return nil, err
@@ -63,6 +76,7 @@ func NewLedService(connectionStateChannel chan bool, gpioChip string, lineNr int
 		closed:    make(chan interface{}),
 		chip:      chip,
 		line:      line,
+		invertLED: invertLED,
 		stateChan: connectionStateChannel,
 	}, nil
 }
@@ -96,15 +110,15 @@ func (l *LedService) Run() {
 	for {
 		select {
 		case <-l.closed: // close function was called
-			l.blinkPattern.changePattern(exit) // set blink pattern to terminate
+			l.blinkPattern.pattern = exit // set blink pattern to terminate
 			return
 		case connectionState := <-l.stateChan:
 			// depending on the connection state change the blink pattern
 			if connectionState {
-				l.blinkPattern.changePattern(on)
+				l.blinkPattern.pattern = on
 
 			} else if !connectionState {
-				l.blinkPattern.changePattern(blink)
+				l.blinkPattern.pattern = blink
 			}
 		}
 	}
@@ -127,13 +141,11 @@ func (l *LedService) controlLed() {
 	stepIdx := 0
 	curPattern := off
 	for {
-		pattern := l.blinkPattern.getPattern()
+		pattern := l.blinkPattern.pattern
 
 		if pattern == exit {
-			err := l.line.SetValue(0)
-			if err != nil {
-				log.Println(err)
-				os.Exit(1)
+			if err := l.SetLED(0); err != nil {
+				fmt.Println(err)
 			}
 			break
 		}
@@ -143,16 +155,21 @@ func (l *LedService) controlLed() {
 		}
 
 		ledVal := steps[curPattern][stepIdx]
-		err := l.line.SetValue(ledVal)
-		if err != nil {
-			log.Println(err)
-			os.Exit(1)
+		if err := l.SetLED(ledVal); err != nil {
+			fmt.Println(err)
+			break
 		}
-
 		time.Sleep(baseTimeMilliSec * time.Millisecond)
 		stepIdx++
 		if stepIdx == numberSteps {
 			stepIdx = 0
 		}
 	}
+}
+
+func (l *LedService) SetLED(ledVal int) error {
+	if l.invertLED {
+		ledVal ^= 0x1
+	}
+	return l.line.SetValue(ledVal)
 }
